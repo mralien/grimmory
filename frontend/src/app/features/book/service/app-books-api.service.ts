@@ -27,7 +27,7 @@ export class AppBooksApiService {
   private readonly token = this.authService.token;
 
   private readonly _filters = signal<AppBookFilters>({});
-  private readonly _sort = signal<AppBookSort>({field: 'addedOn', dir: 'desc'});
+  private readonly _sort = signal<AppBookSort[]>([{field: 'addedOn', dir: 'desc'}]);
   private readonly _search = signal('');
 
   readonly booksQuery = injectInfiniteQuery(() => ({
@@ -131,9 +131,21 @@ export class AppBooksApiService {
     }
   }
 
-  setSort(sort: AppBookSort): void {
+  setSort(sort: AppBookSort | AppBookSort[]): void {
+    if (!Array.isArray(sort)) {
+      sort = [sort];
+    }
+
     const current = this._sort();
-    if (current.field !== sort.field || current.dir !== sort.dir) {
+    let changed = sort.length != current.length;
+
+    if (!changed) {
+      for (let i = 0; i < current.length && !changed; i++) {
+        changed ||= current[i].field != sort[i].field || current[i].dir != sort[i].dir;
+      }
+    }
+
+    if (changed) {
       this._sort.set(sort);
     }
   }
@@ -166,8 +178,9 @@ export class AppBooksApiService {
     return this.buildFilterParams()
       .set('page', page.toString())
       .set('size', PAGE_SIZE.toString())
-      .set('sort', sort.field)
-      .set('dir', sort.dir);
+      .set('sort', JSON.stringify(
+        Object.fromEntries(sort.map(s => [s.field, s.dir.toUpperCase()]))
+      ));
   }
 
   private buildFilterParams(): HttpParams {

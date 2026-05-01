@@ -1,13 +1,15 @@
 package org.booklore.app.dto;
 
 import jakarta.validation.constraints.Size;
+import org.springframework.data.domain.Sort;
 
 import java.util.List;
+import java.util.Map;
 
 public record BookListRequest(
         Integer page,
         Integer size,
-        String sort,
+        Map<String, Sort.Direction> sort,
         String dir,
         Long libraryId,
         Long shelfId,

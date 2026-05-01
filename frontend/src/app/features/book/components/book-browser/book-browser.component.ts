@@ -266,9 +266,10 @@ export class BookBrowserComponent implements AfterViewInit {
     this.appBooksApi.setSearch(search);
 
     if (sortCriteria.length > 0) {
-      const primary = sortCriteria[0];
-      const dir = primary.direction === SortDirection.ASCENDING ? 'asc' as const : 'desc' as const;
-      this.appBooksApi.setSort({field: primary.field, dir});
+      this.appBooksApi.setSort(sortCriteria.map(sc => ({
+        field: sc.field,
+        dir: sc.direction === SortDirection.ASCENDING ? 'asc' as const : 'desc' as const
+      })));
     }
   });
 

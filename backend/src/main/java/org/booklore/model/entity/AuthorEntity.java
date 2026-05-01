@@ -2,6 +2,7 @@ package org.booklore.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.BatchSize;
 
 import java.util.HashSet;
@@ -23,6 +24,9 @@ public class AuthorEntity {
 
     @Column(name = "name")
     private String name;
+
+    // @Column(name = "sort_name")
+    // private String sortName;
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
@@ -46,6 +50,21 @@ public class AuthorEntity {
     @BatchSize(size = 20)
     @Builder.Default
     private Set<BookMetadataEntity> bookMetadataEntityList = new HashSet<>();
+
+    // @PrePersist
+    // @PreUpdate
+    // public void updateSortName() {
+    //     if (StringUtils.isBlank(name)) {
+    //         this.sortName = null;
+    //         return;
+    //     }
+    //
+    //     this.sortName = name.trim();
+    //     int spcIdx = this.sortName.indexOf(' ');
+    //     if (spcIdx > 0) {
+    //         this.sortName = this.sortName.substring(spcIdx + 1);
+    //     }
+    // }
 
     @Override
     public boolean equals(Object o) {

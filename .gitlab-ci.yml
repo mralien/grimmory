@@ -1,0 +1,44 @@
+variables:
+  DIND_DNS: 1.0.0.1
+  DIND_DNS_EFFECTIVE: $DIND_DNS
+
+stages:
+  - build
+
+build_images:
+  image: registry.nexus.blackopdev.com/docker:29.0.2-cli
+  stage: build
+  interruptible: true
+  only:
+    refs:
+      - custom/develop
+  services:
+    - name: registry.nexus.blackopdev.com/docker:29.0.2-dind
+      alias: docker
+      command:
+        - /bin/sh
+        - -c
+        - |
+          dockerd-entrypoint.sh \
+            --dns=127.0.0.11 \
+            --dns=${DIND_DNS_EFFECTIVE} \
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - docker info
+  script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker buildx create --use
+    - docker buildx build
+      --platform linux/amd64
+      --cache-to=type=registry,ref=${CI_REGISTRY_IMAGE}:buildcache-${CI_COMMIT_REF_SLUG},mode=max
+      --cache-from=type=registry,ref=${CI_REGISTRY_IMAGE}:buildcache-${CI_COMMIT_REF_SLUG}
+      --cache-from=type=registry,ref=${CI_REGISTRY_IMAGE}:buildcache
+      --build-arg APP_VERSION="v3.0.2-cdev"
+      --build-arg APP_REVISION=${CI_COMMIT_SHORT_SHA}
+      --push
+      -t ${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}
+      -t ${CI_REGISTRY_IMAGE}:develop
+      --file ./Dockerfile
+      .

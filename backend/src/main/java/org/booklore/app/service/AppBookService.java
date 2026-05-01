@@ -101,7 +101,7 @@ public class AppBookService {
 
         // Handle magic shelf: compose the DB-side specification directly (no IN-list)
         if (req.magicShelfId() != null) {
-            Sort sort = buildSort(req.sort(), req.dir());
+            Sort sort = buildSort(req.sort());
             Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
 
             Specification<BookEntity> spec = buildSpecification(
@@ -116,7 +116,7 @@ public class AppBookService {
             return buildPageResponse(bookPage, userId, pageNum, pageSize);
         }
 
-        Sort sort = buildSort(req.sort(), req.dir());
+        Sort sort = buildSort(req.sort());
         Pageable pageable = PageRequest.of(pageNum, pageSize, sort);
 
         Specification<BookEntity> spec = buildSpecification(
@@ -1046,8 +1046,10 @@ public class AppBookService {
         }
 
         // Any of the user book progress sorting we need to filter to only the current user's progress.
-        String field = getSortField(req.sort());
-        if (field.startsWith("userBookProgress.")) {
+        boolean hasProgressSort = req.sort().keySet().stream()
+            .map(this::getSortField)
+            .anyMatch(f -> f.startsWith("userBookProgress."));
+        if (hasProgressSort) {
             specs.add(AppBookSpecification.withProgress(userId, true));
         }
 
@@ -1056,6 +1058,7 @@ public class AppBookService {
 
     private String getSortField(String sortBy) {
         return switch (sortBy != null ? sortBy.toLowerCase() : DEFAULT_SORT) {
+            case "author" -> "metadata.authors.name";
             case "addedon" -> "addedOn";
             case "title" -> "metadata.title";
             case "seriesname", "series" -> "metadata.seriesName";
@@ -1080,14 +1083,11 @@ public class AppBookService {
         };
     }
 
-    private Sort buildSort(String sortBy, String sortDir) {
-        Sort.Direction direction = "asc".equalsIgnoreCase(sortDir)
-                ? Sort.Direction.ASC
-                : Sort.Direction.DESC;
-
-        String field = getSortField(sortBy);
-
-        return Sort.by(direction, field);
+    private Sort buildSort(Map<String, Sort.Direction> sortMap) {
+        return sortMap.entrySet().stream()
+            .map(se -> Sort.by(se.getValue(), getSortField(se.getKey())))
+            .reduce(Sort::and)
+            .orElse(Sort.by(DEFAULT_SORT));
     }
 
     private int validatePageNumber(Integer page) {
@@ -1104,6 +1104,7 @@ public class AppBookService {
 
     private Specification<BookEntity> buildBaseSpecification(Set<Long> accessibleLibraryIds, Long libraryId) {
         List<Specification<BookEntity>> specs = new ArrayList<>();
+        specs.add(AppBookSpecification.distinct());
         specs.add(AppBookSpecification.notDeleted());
         specs.add(AppBookSpecification.hasDigitalFile());
 

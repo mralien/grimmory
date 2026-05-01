@@ -71,6 +71,15 @@ public class AppBookSpecification {
         return from.join(attribute, joinType);
     }
 
+    public static Specification<BookEntity> distinct() {
+        return (_, query, _) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                query.distinct(true);
+            }
+            return null;
+        };
+    }
+
     public static Specification<BookEntity> inLibraries(Collection<Long> libraryIds) {
         return (root, query, cb) -> {
             if (libraryIds == null || libraryIds.isEmpty()) {
